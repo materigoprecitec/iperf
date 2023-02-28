@@ -1,0 +1,42 @@
+name: MSYS2 release
+on:
+  push:
+    tags:
+      - '*'
+
+jobs:
+  msys2-ucrt64:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: git make gcc
+      - name: CI-Build
+        run: |
+          echo 'Running in MSYS2!'
+          ./ci-build.sh
+      - name: release
+        uses: actions/create-release@v1
+        id: create_release
+        with:
+          draft: false
+          prerelease: false
+          release_name: ${{ steps.version.outputs.version }}
+          tag_name: ${{ github.ref }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+      - name: upload msys artifact
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./assets.tar.gz
+          asset_name: assets.tar.gz
+          asset_content_type: application/gzip
